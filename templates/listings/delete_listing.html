@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete PG Listing - PG-Direct{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-danger">
+                <div class="card-body p-5 text-center">
+                    <div style="font-size: 3rem; color: #ef4444; margin-bottom: 20px;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    
+                    <h3 class="mb-3">Delete PG Listing?</h3>
+                    
+                    <p class="text-muted mb-4">
+                        Are you sure you want to delete <strong>{{ object.pg_name }}</strong>?<br>
+                        <small>This action cannot be undone.</small>
+                    </p>
+
+                    <div class="alert alert-info">
+                        <small>
+                            <i class="fas fa-info-circle"></i>
+                            Deleting this listing will also cancel all pending applications.
+                        </small>
+                    </div>
+
+                    <form method="post" class="mt-4">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                <i class="fas fa-trash"></i> Yes, Delete Listing
+                            </button>
+                            <a href="{% url 'manager_dashboard' %}" class="btn btn-outline-secondary btn-lg">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

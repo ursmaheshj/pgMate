@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile - PG-Direct{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-md-3">
+            <!-- Profile Sidebar -->
+            <div class="card">
+                <div class="card-body text-center">
+                    {% if profile_user.profile_image %}
+                        <img src="{{ profile_user.profile_image.url }}" alt="Profile" class="rounded-circle mb-3" width="120" height="120" style="object-fit: cover;">
+                    {% else %}
+                        <div class="rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center" style="width: 120px; height: 120px; background-color: #e0e7ff;">
+                            <i class="fas fa-user" style="font-size: 3rem; color: #2563eb;"></i>
+                        </div>
+                    {% endif %}
+
+                    <h5>{{ profile_user.get_full_name|default:profile_user.username }}</h5>
+                    <p class="text-muted mb-3">{{ profile_user.get_user_role_display }}</p>
+
+                    {% if request.user == profile_user %}
+                        <a href="{% url 'update_profile' %}" class="btn btn-primary btn-sm w-100">
+                            <i class="fas fa-edit"></i> Edit Profile
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Links -->
+            {% if profile_user.user_role == 'manager' %}
+                <div class="card mt-3">
+                    <div class="card-body">
+                        <h6 class="card-title">Manager Links</h6>
+                        <ul class="list-unstyled">
+                            <li><a href="{% url 'manager_dashboard' %}" class="text-decoration-none">Dashboard</a></li>
+                            <li><a href="{% url 'applications_list' %}" class="text-decoration-none">Applications</a></li>
+                            <li><a href="{% url 'create_listing' %}" class="text-decoration-none">Add PG</a></li>
+                        </ul>
+                    </div>
+                </div>
+            {% elif profile_user.user_role == 'seeker' %}
+                <div class="card mt-3">
+                    <div class="card-body">
+                        <h6 class="card-title">Seeker Links</h6>
+                        <ul class="list-unstyled">
+                            <li><a href="{% url 'home' %}" class="text-decoration-none">Browse PGs</a></li>
+                            <li><a href="{% url 'seeker_applications' %}" class="text-decoration-none">My Applications</a></li>
+                        </ul>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-9">
+            <!-- Profile Information -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-user-circle"></i> Profile Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-3">
+                            <h6 class="mb-0">Full Name</h6>
+                        </div>
+                        <div class="col-sm-9">
+                            <p class="text-muted mb-0">{{ profile_user.get_full_name|default:"Not set" }}</p>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="row mb-3">
+                        <div class="col-sm-3">
+                            <h6 class="mb-0">Email</h6>
+                        </div>
+                        <div class="col-sm-9">
+                            <p class="text-muted mb-0">{{ profile_user.email }}</p>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="row mb-3">
+                        <div class="col-sm-3">
+                            <h6 class="mb-0">Username</h6>
+                        </div>
+                        <div class="col-sm-9">
+                            <p class="text-muted mb-0">{{ profile_user.username }}</p>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="row mb-3">
+                        <div class="col-sm-3">
+                            <h6 class="mb-0">Phone</h6>
+                        </div>
+                        <div class="col-sm-9">
+                            <p class="text-muted mb-0">{{ profile_user.phone_number|default:"Not set" }}</p>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="row mb-0">
+                        <div class="col-sm-3">
+                            <h6 class="mb-0">Account Type</h6>
+                        </div>
+                        <div class="col-sm-9">
+                            <p class="text-muted mb-0">
+                                <span class="badge bg-primary">{{ profile_user.get_user_role_display }}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account Statistics -->
+            {% if profile_user.user_role == 'manager' %}
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="stat-card">
+                            <div class="stat-number">{{ profile_user.pg_listings.count }}</div>
+                            <div class="stat-label">Active Listings</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="stat-card">
+                            <div class="stat-number">{{ profile_user.pg_listings.count|add:0 }}</div>
+                            <div class="stat-label">Total Applications</div>
+                        </div>
+                    </div>
+                </div>
+            {% elif profile_user.user_role == 'seeker' %}
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="stat-card">
+                            <div class="stat-number">{{ profile_user.applications.count }}</div>
+                            <div class="stat-label">My Applications</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="stat-card">
+                            <div class="stat-number">{{ profile_user.applications.filter.status__exact='approved'|length }}</div>
+                            <div class="stat-label">Approved</div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Actions -->
+            {% if request.user == profile_user %}
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-cog"></i> Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <a href="{% url 'update_profile' %}" class="btn btn-primary me-2">
+                            <i class="fas fa-edit"></i> Edit Profile
+                        </a>
+                        <a href="{% url 'logout' %}" class="btn btn-outline-danger">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

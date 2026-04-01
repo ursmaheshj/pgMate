@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ listing.pg_name }} - PG-Direct{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Listing Images & Details -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                {% if listing.image %}
+                    <img src="{{ listing.image.url }}" alt="{{ listing.pg_name }}" class="card-img-top" style="height: 400px; object-fit: cover;">
+                {% else %}
+                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 400px;">
+                        <i class="fas fa-image text-secondary" style="font-size: 5rem;"></i>
+                    </div>
+                {% endif %}
+                
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h1 class="h2 mb-2">{{ listing.pg_name }}</h1>
+                            <p class="text-muted mb-0">
+                                <i class="fas fa-map-marker-alt"></i> {{ listing.address }}, {{ listing.city }}
+                            </p>
+                        </div>
+                        <div class="text-end">
+                            <div class="price-badge" style="font-size: 1.5rem;">
+                                ₹{{ listing.price_per_month }}<br>
+                                <small>/month</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Amenities -->
+                    <div class="mb-4">
+                        <h5><i class="fas fa-star"></i> Amenities</h5>
+                        <div class="mt-3">
+                            {% if listing.has_wifi %}
+                                <span class="amenity-badge"><i class="fas fa-wifi"></i> WiFi</span>
+                            {% else %}
+                                <span class="amenity-badge text-decoration-line-through"><i class="fas fa-wifi"></i> WiFi</span>
+                            {% endif %}
+                            
+                            {% if listing.has_ac %}
+                                <span class="amenity-badge"><i class="fas fa-snowflake"></i> AC</span>
+                            {% else %}
+                                <span class="amenity-badge text-decoration-line-through"><i class="fas fa-snowflake"></i> AC</span>
+                            {% endif %}
+                            
+                            {% if listing.has_food %}
+                                <span class="amenity-badge"><i class="fas fa-utensils"></i> Food</span>
+                            {% else %}
+                                <span class="amenity-badge text-decoration-line-through"><i class="fas fa-utensils"></i> Food</span>
+                            {% endif %}
+                            
+                            {% if listing.has_laundry %}
+                                <span class="amenity-badge"><i class="fas fa-tshirt"></i> Laundry</span>
+                            {% else %}
+                                <span class="amenity-badge text-decoration-line-through"><i class="fas fa-tshirt"></i> Laundry</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Rooms Available -->
+                    <div class="mb-4">
+                        <h5><i class="fas fa-door-open"></i> Rooms</h5>
+                        <p class="mb-0">
+                            <i class="fas fa-check-circle text-success"></i>
+                            <strong>{{ listing.rooms_available }}</strong> room(s) available
+                        </p>
+                    </div>
+
+                    <hr>
+
+                    <!-- Description -->
+                    <div class="mb-4">
+                        <h5><i class="fas fa-info-circle"></i> Description</h5>
+                        <p>{{ listing.description }}</p>
+                    </div>
+
+                    <hr>
+
+                    <!-- Owner Information -->
+                    <div class="mb-4">
+                        <h5><i class="fas fa-user-tie"></i> Owner Information</h5>
+                        <p>
+                            <strong>Name:</strong> {{ listing.owner.get_full_name|default:listing.owner.username }}<br>
+                            {% if listing.owner.phone_number %}
+                                <strong>Phone:</strong> {{ listing.owner.phone_number }}<br>
+                            {% endif %}
+                            <strong>Email:</strong> {{ listing.owner.email }}
+                        </p>
+                    </div>
+
+                    <hr>
+
+                    <!-- Listing Info -->
+                    <div class="text-muted small">
+                        <p class="mb-0">
+                            <i class="fas fa-calendar"></i> Posted on: {{ listing.created_at|date:"d M Y, g:i A" }}
+                        </p>
+                        {% if listing.updated_at != listing.created_at %}
+                            <p class="mb-0">
+                                <i class="fas fa-sync"></i> Updated: {{ listing.updated_at|date:"d M Y, g:i A" }}
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Apply Button -->
+            {% if user.is_authenticated %}
+                {% if can_apply %}
+                    <div class="card mb-4 border-success">
+                        <div class="card-body text-center">
+                            <h5 class="card-title mb-3">Interested?</h5>
+                            <p class="card-text text-muted mb-3">Apply now to connect with the owner</p>
+                            <a href="{% url 'apply_listing' listing.id %}" class="btn btn-success w-100">
+                                <i class="fas fa-hand-paper"></i> Apply Now
+                            </a>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="card mb-4 border-warning">
+                        <div class="card-body text-center">
+                            <h5 class="card-title mb-3">Application Status</h5>
+                            {% if user.user_role == 'seeker' %}
+                                <p class="card-text text-muted mb-0">
+                                    <i class="fas fa-check-circle text-success"></i><br>
+                                    You have already applied to this PG
+                                </p>
+                            {% else %}
+                                <p class="card-text text-muted mb-0">
+                                    <i class="fas fa-info-circle"></i><br>
+                                    Only seekers can apply
+                                </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="card mb-4 border-info">
+                    <div class="card-body text-center">
+                        <h5 class="card-title mb-3">Want to Apply?</h5>
+                        <p class="card-text text-muted mb-3">Log in to apply for this PG</p>
+                        <a href="{% url 'login' %}" class="btn btn-primary w-100 mb-2">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                        <a href="{% url 'register' %}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-user-plus"></i> Register
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Quick Info -->
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3"><i class="fas fa-lightning-bolt"></i> Quick Info</h5>
+                    
+                    <div class="mb-3 pb-3 border-bottom">
+                        <p class="mb-1 text-muted small">
+                            <i class="fas fa-rupee-sign"></i> Price
+                        </p>
+                        <p class="h6 mb-0">₹{{ listing.price_per_month }} per month</p>
+                    </div>
+
+                    <div class="mb-3 pb-3 border-bottom">
+                        <p class="mb-1 text-muted small">
+                            <i class="fas fa-location-dot"></i> City
+                        </p>
+                        <p class="h6 mb-0">{{ listing.city }}</p>
+                    </div>
+
+                    <div class="mb-3 pb-3 border-bottom">
+                        <p class="mb-1 text-muted small">
+                            <i class="fas fa-door-open"></i> Available Rooms
+                        </p>
+                        <p class="h6 mb-0">{{ listing.rooms_available }}</p>
+                    </div>
+
+                    <div class="mb-0">
+                        <p class="mb-1 text-muted small">
+                            <i class="fas fa-star"></i> Amenities
+                        </p>
+                        <p class="h6 mb-0">
+                            {% with amenities=listing.get_amenities %}
+                                {% if amenities %}
+                                    {{ amenities|join:", " }}
+                                {% else %}
+                                    None
+                                {% endif %}
+                            {% endwith %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report -->
+            <div class="mt-3">
+                <small class="text-muted">
+                    <a href="#" class="text-danger text-decoration-none">
+                        <i class="fas fa-flag"></i> Report this listing
+                    </a>
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Go Back Button -->
+    <div class="mt-5">
+        <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Listings
+        </a>
+    </div>
+</div>
+{% endblock %}
