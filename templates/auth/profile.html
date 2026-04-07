@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Profile - PG-Direct{% endblock %}
+{% block title %}Profile - pgMate{% endblock %}
 
 {% block content %}
 <div class="container py-5">
@@ -128,7 +128,7 @@
                     </div>
                     <div class="col-md-6">
                         <div class="stat-card">
-                            <div class="stat-number">{{ profile_user.pg_listings.count|add:0 }}</div>
+                            <div class="stat-number">{{ total_applications }}</div>
                             <div class="stat-label">Total Applications</div>
                         </div>
                     </div>
@@ -143,7 +143,7 @@
                     </div>
                     <div class="col-md-6">
                         <div class="stat-card">
-                            <div class="stat-number">{{ profile_user.applications.filter.status__exact='approved'|length }}</div>
+                            <div class="stat-number">{{ approved_applications }}</div>
                             <div class="stat-label">Approved</div>
                         </div>
                     </div>
