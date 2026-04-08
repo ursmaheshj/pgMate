@@ -7,11 +7,69 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 from django.http import Http404
 from django.db.models import Q, Count
+from httpx import request
 from .models import CustomUser, PGListing, Application
 from .forms import (
     CustomUserCreationForm, CustomUserChangeForm, CustomAuthenticationForm,
     PGListingForm, ApplicationForm, ApplicationStatusForm, SearchListingForm
 )
+
+
+# ===================== Custom Permission Mixins =====================
+
+class ManagerRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+    """
+    Mixin that requires user to be a manager.
+    Redirects to home with error message if not authorized.
+    """
+    def test_func(self):
+        return self.request.user.is_manager()
+    
+    def handle_no_permission(self):
+        if not self.request.user.is_authenticated:
+            return redirect('login')
+        
+        messages.error(
+            self.request, 
+            'You must be a manager to access this page. '
+            'Please switch to a manager account or create one to manage listings.'
+        )
+        return redirect(self.request.META.get('HTTP_REFERER', '/'))
+
+
+class SeekerRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+    """
+    Mixin that requires user to be a seeker.
+    Redirects to home with error message if not authorized.
+    """
+    def test_func(self):
+        return self.request.user.is_seeker()
+    
+    def handle_no_permission(self):
+        if not self.request.user.is_authenticated:
+            return redirect('login')
+        
+        messages.error(
+            self.request,
+            'You must be a seeker to access this feature. '
+            'Please switch to a seeker account or create one to apply for listings.'
+        )
+        return redirect('home')
+
+
+class OwnershipRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+    """
+    Mixin that requires user to own the object.
+    Override test_func() in child class to specify ownership logic.
+    Redirects to home with error message if not authorized.
+    """
+    def handle_no_permission(self):
+        messages.error(
+            self.request,
+            'You do not have permission to perform this action. '
+            'You can only modify your own listings.'
+        )
+        return redirect('home')
 
 
 # ===================== Authentication Views =====================
@@ -54,7 +112,26 @@ class ProfileView(LoginRequiredMixin, DetailView):
     
     def get_object(self):
         return self.request.user
-
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.get_object()
+        
+        # Calculate statistics for seekers
+        if user.is_seeker():
+            user_applications = user.applications.all()
+            context['total_applications'] = user_applications.count()
+            context['approved_applications'] = user_applications.filter(status='approved').count()
+        
+        # Calculate statistics for managers
+        elif user.is_manager():
+            listings = user.pg_listings.all()
+            all_applications = Application.objects.filter(pg__owner=user)
+            context['total_listings'] = listings.count()
+            context['total_applications'] = all_applications.count()
+        
+        return context
+    
 
 class UpdateProfileView(LoginRequiredMixin, UpdateView):
     """View for updating user profile."""
@@ -135,11 +212,8 @@ class ListingDetailView(DetailView):
 
 # ===================== Manager Dashboard & Listing Management =====================
 
-class ManagerDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
+class ManagerDashboardView(ManagerRequiredMixin, View):
     """Dashboard for PG managers."""
-    
-    def test_func(self):
-        return self.request.user.is_manager()
     
     def get(self, request):
         listings = PGListing.objects.filter(owner=request.user)
@@ -157,15 +231,12 @@ class ManagerDashboardView(LoginRequiredMixin, UserPassesTestMixin, View):
         return render(request, 'listings/manager_dashboard.html', context)
 
 
-class CreateListingView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+class CreateListingView(ManagerRequiredMixin, CreateView):
     """View for creating a new PG listing."""
     model = PGListing
     form_class = PGListingForm
     template_name = 'listings/create_listing.html'
     success_url = reverse_lazy('manager_dashboard')
-    
-    def test_func(self):
-        return self.request.user.is_manager()
     
     def form_valid(self, form):
         form.instance.owner = self.request.user
@@ -173,7 +244,7 @@ class CreateListingView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
         return super().form_valid(form)
 
 
-class UpdateListingView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+class UpdateListingView(OwnershipRequiredMixin, UpdateView):
     """View for updating a PG listing."""
     model = PGListing
     form_class = PGListingForm
@@ -189,7 +260,7 @@ class UpdateListingView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         return super().form_valid(form)
 
 
-class DeleteListingView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+class DeleteListingView(OwnershipRequiredMixin, DeleteView):
     """View for deleting a PG listing."""
     model = PGListing
     template_name = 'listings/delete_listing.html'
@@ -206,12 +277,10 @@ class DeleteListingView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 
 # ===================== Application Management Views =====================
 
-class ApplicationListView(LoginRequiredMixin, UserPassesTestMixin, View):
+class ApplicationListView(ManagerRequiredMixin, View):
     """View for managers to review applications."""
     
-    def test_func(self):
-        return self.request.user.is_manager()
-        
+    def get(self, request):
         listings = PGListing.objects.filter(owner=request.user)
         applications = Application.objects.filter(pg__owner=request.user).select_related('pg', 'applicant')
         
@@ -253,14 +322,11 @@ class UpdateApplicationStatusView(LoginRequiredMixin, View):
         return redirect('applications_list')
 
 
-class ApplyListingView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+class ApplyListingView(SeekerRequiredMixin, CreateView):
     """View for seekers to apply to a listing."""
     model = Application
     form_class = ApplicationForm
     template_name = 'listings/apply_listing.html'
-    
-    def test_func(self):
-        return self.request.user.is_seeker()
     
     def dispatch(self, request, *args, **kwargs):
         # Check if already applied
@@ -287,14 +353,11 @@ class ApplyListingView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
         return reverse_lazy('listing_detail', kwargs={'pk': self.kwargs.get('listing_id')})
 
 
-class SeekerApplicationsView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+class SeekerApplicationsView(SeekerRequiredMixin, ListView):
     """View for seekers to see their applications."""
     model = Application
     template_name = 'listings/seeker_applications.html'
     context_object_name = 'applications'
-    
-    def test_func(self):
-        return self.request.user.is_seeker()
     
     def get_queryset(self):
         return Application.objects.filter(applicant=self.request.user).select_related('pg', 'pg__owner')
